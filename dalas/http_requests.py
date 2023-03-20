@@ -21,7 +21,9 @@ class BaseRequester(ABC):
 
 
 class HTTPRequester(BaseRequester):
-    def __init__(self, base_url: str, token: str, validator: BaseValidator):
+    def __init__(self, base_url: str,
+                 token: str,
+                 validator: BaseValidator):
         super().__init__(base_url, token, validator)
         self.__BASE_URL = base_url
         self.__token = token

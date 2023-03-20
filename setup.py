@@ -2,8 +2,8 @@ from setuptools import setup
 
 setup(
     name='DaLaS',
-    version='0.1.0',
-    packages=['dalas'],
+    version='0.1.1',
+    packages=['dalas', 'dalas.models'],
     url='https://github.com/TheRealMizAL/DaLaS',
     license='GNU GPL v3.0',
     author='kov20',

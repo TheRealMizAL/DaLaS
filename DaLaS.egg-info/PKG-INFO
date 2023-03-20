@@ -1,8 +1,9 @@
 Metadata-Version: 2.1
 Name: DaLaS
-Version: 0.1.0
+Version: 0.1.1
 Summary: Fully customizable asynchronous Donation Alerts API
 Home-page: https://github.com/TheRealMizAL/DaLaS
 Author: kov20
 Author-email: amizurenko2002@gmail.com
 License: GNU GPL v3.0
+License-File: LICENSE.md

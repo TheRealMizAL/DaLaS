@@ -1,9 +1,13 @@
+import os
+import time
+import webbrowser
+from pathlib import Path
 from typing import Union, Optional
 from urllib.parse import urlencode
-import time
 
-import webbrowser
 import yaml
+from loguru import logger
+from pydantic.error_wrappers import ValidationError
 
 from .http_requests import HTTPRequester
 from .types import TokenRequest, TokenResponse
@@ -11,12 +15,12 @@ from .validators import DefaultValidator
 
 
 class BaseToken:
-    def __init__(self, path: str,
+    def __init__(self, path: str | Path,
                  redirect_uri: str,
                  client_id: int,
                  response_type: str,
                  scope: Union[str, list]):
-        self.path = path or '~/.donationalerts/secret.yaml'
+        self.path = (path if isinstance(path, Path) else Path(path)) or Path('~/.donationalerts/secret.yaml')
         self.redirect_uri = redirect_uri
         self.client_id = client_id
         self.response_type = response_type
@@ -27,12 +31,20 @@ class BaseToken:
                                           response_type=self.response_type, scope=self.scope)
         url = 'https://www.donationalerts.com/oauth/authorize?' + urlencode(data.dict())
         webbrowser.open(url)
-
         return input(f'Copy {self.response_type} from url and paste here: ')
 
     @property
     async def key(self):
         raise NotImplementedError()
+
+    def _create_token_file(self):
+        if not self.path.exists():
+            if not Path('~/.donationalerts').exists():
+                if os.name == 'nt':
+                    os.makedirs('~/.donationalerts')
+
+            with open(self.path, 'w+'):
+                pass
 
 
 class AuthCode(BaseToken):
@@ -47,21 +59,22 @@ class AuthCode(BaseToken):
 
     @property
     async def key(self):
-        try:
-            with open(self.path, 'r', encoding='utf-8') as file:
-                token_response = TokenResponse(**yaml.load(file, yaml.Loader))
-        except FileNotFoundError:
-            token_response = await self.__get_token()
-            with open(self.path, 'w', encoding='utf-8') as file:
-                yaml.dump(token_response.dict(), file)
-            return token_response.access_token
+        self._create_token_file()
 
-        if token_response.expires_in < int(time.time()):
-            token_response = await self.__refresh_token(token_response.refresh_token)
-            with open(self.path, 'w', encoding='utf-8') as file:
-                yaml.dump(token_response.dict(), file)
+        with open(self.path, 'r+') as f:
+            try:
+                token = TokenResponse(**yaml.load(f, yaml.Loader))
+                if token.expires_in < int(time.time()):
+                    token = await self.__refresh_token(token.refresh_token)
+                    f.seek(0)
+                    yaml.dump(token.dict(), f)
+            except ValidationError:
+                token = await self.__get_token()
+                f.seek(0)
+                yaml.dump(token.dict(), f)
+                return token.access_token
 
-        return token_response.access_token
+        return token.access_token
 
     async def __get_token(self):
         code = await self.auth_request()
@@ -100,14 +113,16 @@ class Implicit(BaseToken):
 
     @property
     async def key(self):
-        try:
-            with open(self.path, 'r', encoding='utf-8') as file:
-                return yaml.load(file, yaml.Loader)['access_token']
-        except FileNotFoundError:
-            token_response = await self.auth_request()
-            with open(self.path, 'w', encoding='utf-8') as file:
-                yaml.dump({'access_token': token_response}, file)
-            return token_response
+        self._create_token_file()
+        with open(self.path, 'r+') as f:
+            try:
+                token = yaml.load(f, yaml.Loader)['access_token']
+            except TypeError:
+                token = await self.auth_request()
+                f.seek(0)
+                yaml.dump({'access_token': token}, f)
+
+        return token
 
 
 class Token:
@@ -129,4 +144,6 @@ class Token:
 
     @property
     async def key(self):
-        return await self.token.key
+        key = await self.token.key
+        logger.debug(f"Received key: {key}")
+        return key

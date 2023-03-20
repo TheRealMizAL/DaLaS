@@ -1,3 +1,5 @@
+LICENSE.md
+README.md
 setup.cfg
 setup.py
 DaLaS.egg-info/PKG-INFO
@@ -13,3 +15,7 @@ dalas/http_requests.py
 dalas/token.py
 dalas/types.py
 dalas/validators.py
+dalas/models/__init__.py
+dalas/models/base_models.py
+dalas/models/data_models.py
+dalas/models/raw_models.py
