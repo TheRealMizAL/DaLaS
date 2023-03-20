@@ -4,4 +4,3 @@ PyYAML>=6.0
 websockets>=10.3
 aiohttp>=3.8.1
 orjson~=3.8.5
-setuptools~=63.2.0
